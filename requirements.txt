@@ -1,0 +1,6 @@
+streamlit
+python-dotenv
+langchain-groq
+pillow
+PyPDF2
+requests
