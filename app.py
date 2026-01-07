@@ -9,10 +9,10 @@ GROQ_API_KEY = os.getenv("gsk_KRBjSOTMO6QmB6SZeSAZWGdyb3FYrb3r41DKlyScEL0Xe1MNnr
 
 # ================= INITIALIZE LLM =================
 llm = ChatGroq(
-    groq_api_key=GROQ_API_KEY,
     model="openai/gpt-oss-120b",
     temperature=0
 )
+
 
 # ================= SYSTEM PROMPT =================
 SYSTEM_PROMPT = """
@@ -57,3 +57,4 @@ for q, a in reversed(st.session_state.history):
     st.markdown(f"**🧑 You:** {q}")
     st.markdown(f"**🤖 Assistant:** {a}")
     st.markdown("---")
+
