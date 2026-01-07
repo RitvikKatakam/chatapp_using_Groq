@@ -5,14 +5,17 @@ from dotenv import load_dotenv
 
 # ================= LOAD ENV =================
 load_dotenv()
-GROQ_API_KEY = os.getenv("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")
+
+# Safety check
+if not os.getenv("GROQ_API_KEY"):
+    st.error("❌ GROQ_API_KEY not found. Set it in .env or Streamlit Secrets.")
+    st.stop()
 
 # ================= INITIALIZE LLM =================
 llm = ChatGroq(
     model="openai/gpt-oss-120b",
     temperature=0
 )
-
 
 # ================= SYSTEM PROMPT =================
 SYSTEM_PROMPT = """
@@ -40,16 +43,14 @@ st.caption("Powered by Groq")
 if "history" not in st.session_state:
     st.session_state.history = []
 
-# Input form (clears on submit, supports Enter key submission)
+# Input form
 with st.form("chat_form", clear_on_submit=True):
-    question = st.text_input("Ask any question", key="question")
+    question = st.text_input("Ask any question")
     submitted = st.form_submit_button("Submit")
-    if submitted:
-        if question.strip():
-            answer = ask_assistant(question)
-            st.session_state.history.append((question, answer))
-        else:
-            st.warning("Please enter a question.")
+
+    if submitted and question.strip():
+        answer = ask_assistant(question)
+        st.session_state.history.append((question, answer))
 
 # Display chat history
 st.markdown("---")
@@ -57,4 +58,3 @@ for q, a in reversed(st.session_state.history):
     st.markdown(f"**🧑 You:** {q}")
     st.markdown(f"**🤖 Assistant:** {a}")
     st.markdown("---")
-
