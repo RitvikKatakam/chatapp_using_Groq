@@ -42,6 +42,12 @@ Rules:
 - Be accurate and concise
 - Ask ONE follow-up question at the end
 """
+with st.sidebar:
+    st.markdown("## 🧠 BrainWave AI")
+    st.markdown("AI-powered chat & deep research assistant")
+    st.divider()
+    st.markdown("🚀 Powered by Grok API")
+
 
 def ask_assistant(question):
     prompt = f"{SYSTEM_PROMPT}\n\nUser Question:\n{question}"
@@ -71,6 +77,7 @@ for q, a in reversed(st.session_state.history):
     st.markdown(f"**🧑 You:** {q}")
     st.markdown(f"**🤖 Bot:** {a}")
     st.markdown("---")
+
 
 
 
