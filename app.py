@@ -78,18 +78,22 @@ llm = ChatGroq(
 st.markdown("<h1 style='text-align:center;'>🧠 BrainWave AI</h1>", unsafe_allow_html=True)
 st.caption("Think Deeper • Ask Smarter • Powered by Grok")
 
-# ================= SIDEBAR =================
-with st.sidebar:
-    st.markdown("## 🧠 BrainWave AI")
-    st.info("⬅️ Use this sidebar for controls")
-    st.markdown("AI-powered chat & deep research assistant")
-    st.divider()
+# ================= SETTINGS PANEL (REPLACES SIDEBAR) =================
+with st.expander("⚙️ Settings & Controls", expanded=False):
+    col_a, col_b = st.columns(2)
 
-    if st.button("🗑️ Clear Chat History"):
-        clear_messages()
-        st.success("Chat history cleared")
+    with col_a:
+        if st.button("🗑️ Clear Chat History"):
+            clear_messages()
+            st.success("Chat history cleared")
 
-    st.divider()
+    with col_b:
+        if st.button("📎 Clear Uploaded File"):
+            st.session_state.uploaded_file = None
+            st.session_state.file_context = ""
+            st.session_state.file_uploader = None
+            st.success("Uploaded file cleared")
+
     st.markdown("🚀 Powered by Grok API")
 
 # ================= SYSTEM PROMPT =================
@@ -131,7 +135,7 @@ if "uploaded_file" not in st.session_state:
 if "file_context" not in st.session_state:
     st.session_state.file_context = ""
 
-# ================= EXTENDED FILE UPLOAD UI =================
+# ================= FILE UPLOAD + CHAT LAYOUT =================
 col1, col2 = st.columns([0.35, 0.65])
 
 with col1:
@@ -149,18 +153,16 @@ with col1:
         st.session_state.file_context = read_uploaded_file(uploaded_file)
         st.success("File uploaded successfully")
 
-    # ❌ Cross button for images
+    # ❌ Remove image button (only for images)
     if (
         st.session_state.uploaded_file
         and st.session_state.uploaded_file.type.startswith("image")
     ):
-        _, col_x = st.columns([0.85, 0.15])
-        with col_x:
-            if st.button("❌", help="Remove image"):
-                st.session_state.uploaded_file = None
-                st.session_state.file_context = ""
-                st.session_state.file_uploader = None
-                st.rerun()
+        if st.button("❌ Remove Image"):
+            st.session_state.uploaded_file = None
+            st.session_state.file_context = ""
+            st.session_state.file_uploader = None
+            st.rerun()
 
 with col2:
     st.markdown("### 💬 Chat with BrainWave AI")
@@ -196,7 +198,7 @@ for user_msg, bot_msg in reversed(history):
     st.markdown(f"**🤖 BrainWave AI:** {bot_msg}")
     st.markdown("---")
 
-# ================= CUSTOM CSS + BRIGHT STICKER =================
+# ================= CUSTOM CSS =================
 st.markdown("""
 <style>
 section[data-testid="stFileUploader"] {
@@ -214,37 +216,8 @@ section[data-testid="stFileUploader"] label {
     height: 180px;
     font-size: 16px;
 }
-
-/* Hide Streamlit chrome */
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
 header {visibility: hidden;}
-
-/* Bright Sidebar Sticker */
-.sidebar-sticker {
-    position: fixed;
-    top: 50%;
-    left: 10px;
-    transform: translateY(-50%);
-    background: linear-gradient(135deg, #00E5FF, #7C4DFF);
-    color: white;
-    padding: 12px 16px;
-    border-radius: 12px;
-    font-weight: bold;
-    font-size: 14px;
-    box-shadow: 0 0 18px rgba(0,229,255,0.9);
-    animation: pulse 1.5s infinite;
-    z-index: 9999;
-}
-
-@keyframes pulse {
-    0% { box-shadow: 0 0 10px rgba(0,229,255,0.6); }
-    50% { box-shadow: 0 0 28px rgba(124,77,255,1); }
-    100% { box-shadow: 0 0 10px rgba(0,229,255,0.6); }
-}
 </style>
-
-<div class="sidebar-sticker">
-⬅️ Open Sidebar
-</div>
 """, unsafe_allow_html=True)
