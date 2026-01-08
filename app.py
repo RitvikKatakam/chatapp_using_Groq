@@ -1,10 +1,12 @@
 import os
+import sqlite3
 import json
 import streamlit as st
 from langchain_groq import ChatGroq
 from dotenv import load_dotenv
+from datetime import datetime
 
-# ================= PAGE CONFIG (FIRST STREAMLIT CALL) =================
+# ================= PAGE CONFIG =================
 st.set_page_config(
     page_title="BrainWave AI",
     page_icon="🧠",
@@ -14,10 +16,60 @@ st.set_page_config(
 # ================= LOAD ENV =================
 load_dotenv()
 
-# Safety check for API key
 if not os.getenv("GROQ_API_KEY"):
     st.error("❌ GROQ_API_KEY not found. Set it in Streamlit Secrets or .env")
     st.stop()
+
+# ================= DATABASE SETUP =================
+DB_PATH = "chat_history.db"
+
+def get_db():
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    return conn
+
+def init_db():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS chat_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_message TEXT,
+            assistant_message TEXT,
+            timestamp TEXT
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+def save_message(user_msg, assistant_msg):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO chat_history (user_message, assistant_message, timestamp) VALUES (?, ?, ?)",
+        (user_msg, assistant_msg, datetime.now().isoformat())
+    )
+    conn.commit()
+    conn.close()
+
+def load_messages():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT user_message, assistant_message FROM chat_history ORDER BY id ASC"
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+def clear_messages():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM chat_history")
+    conn.commit()
+    conn.close()
+
+# Initialize DB
+init_db()
 
 # ================= INITIALIZE LLM =================
 llm = ChatGroq(
@@ -38,17 +90,9 @@ with st.sidebar:
     st.markdown("AI-powered chat & deep research assistant")
     st.divider()
 
-    if st.button("🗑️ Clear Chat"):
-        st.session_state.history = []
-        st.success("Chat cleared")
-
-    if "history" in st.session_state and st.session_state.history:
-        st.download_button(
-            label="⬇️ Download Chat History",
-            data=json.dumps(st.session_state.history, indent=2),
-            file_name="brainwave_ai_chat_history.json",
-            mime="application/json"
-        )
+    if st.button("🗑️ Clear Chat History"):
+        clear_messages()
+        st.success("Chat history cleared")
 
     st.divider()
     st.markdown("🚀 Powered by Grok API")
@@ -71,10 +115,6 @@ def ask_assistant(question):
     response = llm.invoke(prompt)
     return response.content
 
-# ================= SESSION STATE =================
-if "history" not in st.session_state:
-    st.session_state.history = []
-
 # ================= CHAT INPUT =================
 with st.form("chat_form", clear_on_submit=True):
     question = st.text_input("Ask any question")
@@ -82,16 +122,15 @@ with st.form("chat_form", clear_on_submit=True):
 
     if submitted and question.strip():
         answer = ask_assistant(question)
-        st.session_state.history.append({
-            "user": question,
-            "assistant": answer
-        })
+        save_message(question, answer)
 
 # ================= DISPLAY CHAT =================
 st.markdown("---")
-for chat in reversed(st.session_state.history):
-    st.markdown(f"**🧑 You:** {chat['user']}")
-    st.markdown(f"**🤖 BrainWave AI:** {chat['assistant']}")
+history = load_messages()
+
+for user_msg, bot_msg in reversed(history):
+    st.markdown(f"**🧑 You:** {user_msg}")
+    st.markdown(f"**🤖 BrainWave AI:** {bot_msg}")
     st.markdown("---")
 
 # ================= HIDE STREAMLIT UI =================
