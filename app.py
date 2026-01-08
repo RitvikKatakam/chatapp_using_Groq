@@ -89,7 +89,10 @@ llm = ChatGroq(
 )
 
 # ================= BRAND HEADER =================
-st.markdown("<h1 style='text-align:center;'>🧠 BrainWave AI</h1>", unsafe_allow_html=True)
+st.markdown(
+    "<h1 style='text-align:center;'>🧠 BrainWave AI</h1>",
+    unsafe_allow_html=True
+)
 st.caption("Think Deeper • Ask Smarter • Powered by Grok")
 
 # ================= SETTINGS PANEL =================
@@ -198,7 +201,27 @@ for ts, user_msg, bot_msg in reversed(history):
     st.caption(f"🕒 {ts}")
     st.markdown("---")
 
-# ================= CUSTOM CSS =================
+# ================= FOOTER =================
+st.markdown("""
+<style>
+.app-footer {
+    position: fixed;
+    bottom: 10px;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    color: #9aa0a6;
+    font-size: 14px;
+    z-index: 999;
+}
+</style>
+
+<div class="app-footer">
+🤖 <b>BrainWave AI</b> — Created by an AI Student
+</div>
+""", unsafe_allow_html=True)
+
+# ================= HIDE STREAMLIT UI =================
 st.markdown("""
 <style>
 section[data-testid="stFileUploader"] {
