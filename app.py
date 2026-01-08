@@ -5,7 +5,6 @@ from langchain_groq import ChatGroq
 from dotenv import load_dotenv
 from datetime import datetime
 from PyPDF2 import PdfReader
-from PIL import Image
 
 # ================= PAGE CONFIG =================
 st.set_page_config(
@@ -78,21 +77,16 @@ llm = ChatGroq(
 st.markdown("<h1 style='text-align:center;'>🧠 BrainWave AI</h1>", unsafe_allow_html=True)
 st.caption("Think Deeper • Ask Smarter • Powered by Grok")
 
-# ================= SETTINGS PANEL (REPLACES SIDEBAR) =================
+# ================= SETTINGS PANEL =================
 with st.expander("⚙️ Settings & Controls", expanded=False):
-    col_a, col_b = st.columns(2)
+    if st.button("🗑️ Clear Chat History"):
+        clear_messages()
+        st.success("Chat history cleared")
 
-    with col_a:
-        if st.button("🗑️ Clear Chat History"):
-            clear_messages()
-            st.success("Chat history cleared")
-
-    with col_b:
-        if st.button("📎 Clear Uploaded File"):
-            st.session_state.uploaded_file = None
-            st.session_state.file_context = ""
-            st.session_state.file_uploader = None
-            st.success("Uploaded file cleared")
+    if st.button("📎 Clear Uploaded File"):
+        st.session_state.file_context = ""
+        st.session_state.file_uploader = None
+        st.success("Uploaded file cleared")
 
     st.markdown("🚀 Powered by Grok API")
 
@@ -109,7 +103,7 @@ Rules:
 - Ask ONE follow-up question at the end
 """
 
-# ================= FILE HANDLING =================
+# ================= FILE HANDLING (PDF & TXT ONLY) =================
 def read_uploaded_file(uploaded_file):
     if uploaded_file.type == "application/pdf":
         reader = PdfReader(uploaded_file)
@@ -119,23 +113,16 @@ def read_uploaded_file(uploaded_file):
                 text += page.extract_text()
         return text
 
-    elif uploaded_file.type.startswith("image"):
-        st.image(uploaded_file, caption="Uploaded Image", use_column_width=True)
-        return "The user uploaded an image. Analyze and explain it in detail."
-
     elif uploaded_file.type == "text/plain":
         return uploaded_file.read().decode("utf-8")
 
     return ""
 
 # ================= SESSION STATE =================
-if "uploaded_file" not in st.session_state:
-    st.session_state.uploaded_file = None
-
 if "file_context" not in st.session_state:
     st.session_state.file_context = ""
 
-# ================= FILE UPLOAD + CHAT LAYOUT =================
+# ================= FILE UPLOAD + CHAT =================
 col1, col2 = st.columns([0.35, 0.65])
 
 with col1:
@@ -143,26 +130,14 @@ with col1:
 
     uploaded_file = st.file_uploader(
         "",
-        type=["pdf", "txt", "png", "jpg", "jpeg"],
+        type=["pdf", "txt"],  # ✅ DOCUMENTS ONLY
         label_visibility="collapsed",
         key="file_uploader"
     )
 
     if uploaded_file:
-        st.session_state.uploaded_file = uploaded_file
         st.session_state.file_context = read_uploaded_file(uploaded_file)
         st.success("File uploaded successfully")
-
-    # ❌ Remove image button (only for images)
-    if (
-        st.session_state.uploaded_file
-        and st.session_state.uploaded_file.type.startswith("image")
-    ):
-        if st.button("❌ Remove Image"):
-            st.session_state.uploaded_file = None
-            st.session_state.file_context = ""
-            st.session_state.file_uploader = None
-            st.rerun()
 
 with col2:
     st.markdown("### 💬 Chat with BrainWave AI")
