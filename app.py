@@ -1,12 +1,13 @@
 import os
 import sqlite3
-import json
 import streamlit as st
 from langchain_groq import ChatGroq
 from dotenv import load_dotenv
 from datetime import datetime
+from PyPDF2 import PdfReader
+from PIL import Image
 
-# ================= PAGE CONFIG =================
+# ================= PAGE CONFIG (FIRST STREAMLIT CALL) =================
 st.set_page_config(
     page_title="BrainWave AI",
     page_icon="🧠",
@@ -24,13 +25,12 @@ if not os.getenv("GROQ_API_KEY"):
 DB_PATH = "chat_history.db"
 
 def get_db():
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-    return conn
+    return sqlite3.connect(DB_PATH, check_same_thread=False)
 
 def init_db():
     conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("""
+    cur = conn.cursor()
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS chat_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_message TEXT,
@@ -43,9 +43,9 @@ def init_db():
 
 def save_message(user_msg, assistant_msg):
     conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO chat_history (user_message, assistant_message, timestamp) VALUES (?, ?, ?)",
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO chat_history VALUES (NULL, ?, ?, ?)",
         (user_msg, assistant_msg, datetime.now().isoformat())
     )
     conn.commit()
@@ -53,22 +53,19 @@ def save_message(user_msg, assistant_msg):
 
 def load_messages():
     conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute(
-        "SELECT user_message, assistant_message FROM chat_history ORDER BY id ASC"
-    )
-    rows = cursor.fetchall()
+    cur = conn.cursor()
+    cur.execute("SELECT user_message, assistant_message FROM chat_history ORDER BY id ASC")
+    rows = cur.fetchall()
     conn.close()
     return rows
 
 def clear_messages():
     conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM chat_history")
+    cur = conn.cursor()
+    cur.execute("DELETE FROM chat_history")
     conn.commit()
     conn.close()
 
-# Initialize DB
 init_db()
 
 # ================= INITIALIZE LLM =================
@@ -78,10 +75,7 @@ llm = ChatGroq(
 )
 
 # ================= BRAND HEADER =================
-st.markdown(
-    "<h1 style='text-align: center;'>🧠 BrainWave AI</h1>",
-    unsafe_allow_html=True
-)
+st.markdown("<h1 style='text-align:center;'>🧠 BrainWave AI</h1>", unsafe_allow_html=True)
 st.caption("Think Deeper • Ask Smarter • Powered by Grok")
 
 # ================= SIDEBAR =================
@@ -93,6 +87,10 @@ with st.sidebar:
     if st.button("🗑️ Clear Chat History"):
         clear_messages()
         st.success("Chat history cleared")
+
+    if st.button("📎 Clear Uploaded File"):
+        st.session_state.file_context = ""
+        st.success("Uploaded file cleared")
 
     st.divider()
     st.markdown("🚀 Powered by Grok API")
@@ -110,10 +108,58 @@ Rules:
 - Ask ONE follow-up question at the end
 """
 
+# ================= FILE HANDLING =================
+def read_uploaded_file(uploaded_file):
+    if uploaded_file.type == "application/pdf":
+        reader = PdfReader(uploaded_file)
+        text = ""
+        for page in reader.pages:
+            if page.extract_text():
+                text += page.extract_text()
+        return text
+
+    elif uploaded_file.type.startswith("image"):
+        st.image(uploaded_file, caption="Uploaded Image", use_column_width=True)
+        return "The user uploaded an image. Analyze and explain it in detail."
+
+    elif uploaded_file.type == "text/plain":
+        return uploaded_file.read().decode("utf-8")
+
+    return ""
+
+# ================= SESSION STATE =================
+if "file_context" not in st.session_state:
+    st.session_state.file_context = ""
+
+# ================= + FILE UPLOAD UI =================
+col1, col2 = st.columns([0.08, 0.92])
+
+with col1:
+    uploaded_file = st.file_uploader(
+        "➕",
+        label_visibility="collapsed",
+        type=["pdf", "txt", "png", "jpg", "jpeg"]
+    )
+
+    if uploaded_file:
+        st.session_state.file_context = read_uploaded_file(uploaded_file)
+        st.success("File uploaded successfully")
+
+with col2:
+    st.markdown("### Chat with BrainWave AI")
+
+# ================= AI FUNCTION =================
 def ask_assistant(question):
-    prompt = f"{SYSTEM_PROMPT}\n\nUser Question:\n{question}"
-    response = llm.invoke(prompt)
-    return response.content
+    prompt = f"""
+{SYSTEM_PROMPT}
+
+Uploaded File Context:
+{st.session_state.file_context}
+
+User Question:
+{question}
+"""
+    return llm.invoke(prompt).content
 
 # ================= CHAT INPUT =================
 with st.form("chat_form", clear_on_submit=True):
