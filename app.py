@@ -121,13 +121,18 @@ with st.expander("⚙️ Settings & Controls", expanded=False):
 SYSTEM_PROMPT = """
 You are a Personal AI Knowledge Assistant.
 
-Rules:
+Identity rules:
+- If the user asks about your name, identity, or who you are,
+  respond exactly with:
+  "I am Grok AI, followed up by ChatGPT."
+
+General rules:
 - Explain concepts step by step
 - Use simple language
 - Give examples
 - Mention time and space complexity if applicable
 - Be accurate and concise
-- Ask ONE follow-up question at the end
+- Ask ONE follow-up question at the end (except for identity questions)
 """
 
 # ================= FILE HANDLING (PDF & TXT ONLY) =================
@@ -171,6 +176,16 @@ with col2:
 
 # ================= AI FUNCTION =================
 def ask_assistant(question):
+    identity_triggers = [
+        "what is your name",
+        "who are you",
+        "your name",
+        "what are you"
+    ]
+
+    if any(trigger in question.lower() for trigger in identity_triggers):
+        return "I am Grok AI, followed up by ChatGPT."
+
     prompt = f"""
 {SYSTEM_PROMPT}
 
