@@ -56,5 +56,6 @@ with st.form("chat_form", clear_on_submit=True):
 st.markdown("---")
 for q, a in reversed(st.session_state.history):
     st.markdown(f"**🧑 You:** {q}")
-    st.markdown(f"**🤖 Assistant:** {a}")
+    st.markdown(f"**🤖 Bot:** {a}")
     st.markdown("---")
+
