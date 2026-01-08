@@ -88,10 +88,6 @@ with st.sidebar:
         clear_messages()
         st.success("Chat history cleared")
 
-    if st.button("📎 Clear Uploaded File"):
-        st.session_state.file_context = ""
-        st.success("Uploaded file cleared")
-
     st.divider()
     st.markdown("🚀 Powered by Grok API")
 
@@ -128,23 +124,43 @@ def read_uploaded_file(uploaded_file):
     return ""
 
 # ================= SESSION STATE =================
+if "uploaded_file" not in st.session_state:
+    st.session_state.uploaded_file = None
+
 if "file_context" not in st.session_state:
     st.session_state.file_context = ""
 
 # ================= EXTENDED FILE UPLOAD UI =================
-col1, col2 = st.columns([0.35, 0.65])  # 👈 wider uploader
+col1, col2 = st.columns([0.35, 0.65])
 
 with col1:
     st.markdown("### 📎 Upload File")
+
     uploaded_file = st.file_uploader(
         "",
         type=["pdf", "txt", "png", "jpg", "jpeg"],
-        label_visibility="collapsed"
+        label_visibility="collapsed",
+        key="file_uploader"
     )
 
     if uploaded_file:
+        st.session_state.uploaded_file = uploaded_file
         st.session_state.file_context = read_uploaded_file(uploaded_file)
         st.success("File uploaded successfully")
+
+    # ❌ CROSS BUTTON ONLY FOR IMAGES
+    if (
+        st.session_state.uploaded_file
+        and st.session_state.uploaded_file.type.startswith("image")
+    ):
+        _, col_x = st.columns([0.85, 0.15])
+
+        with col_x:
+            if st.button("❌", help="Remove image"):
+                st.session_state.uploaded_file = None
+                st.session_state.file_context = ""
+                st.session_state.file_uploader = None
+                st.rerun()
 
 with col2:
     st.markdown("### 💬 Chat with BrainWave AI")
@@ -180,22 +196,17 @@ for user_msg, bot_msg in reversed(history):
     st.markdown(f"**🤖 BrainWave AI:** {bot_msg}")
     st.markdown("---")
 
-# ================= CUSTOM CSS (EXTEND UPLOAD BOX) =================
+# ================= CUSTOM CSS =================
 st.markdown("""
 <style>
-/* Extend file uploader width */
 section[data-testid="stFileUploader"] {
     width: 100%;
 }
-
-/* Increase height and padding */
 section[data-testid="stFileUploader"] > div {
     min-height: 220px;
     padding: 20px;
     border-radius: 14px;
 }
-
-/* Center drag & drop text */
 section[data-testid="stFileUploader"] label {
     display: flex;
     align-items: center;
