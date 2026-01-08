@@ -7,7 +7,7 @@ from datetime import datetime
 from PyPDF2 import PdfReader
 from PIL import Image
 
-# ================= PAGE CONFIG (FIRST STREAMLIT CALL) =================
+# ================= PAGE CONFIG =================
 st.set_page_config(
     page_title="BrainWave AI",
     page_icon="🧠",
@@ -131,14 +131,15 @@ def read_uploaded_file(uploaded_file):
 if "file_context" not in st.session_state:
     st.session_state.file_context = ""
 
-# ================= + FILE UPLOAD UI =================
-col1, col2 = st.columns([0.08, 0.92])
+# ================= EXTENDED FILE UPLOAD UI =================
+col1, col2 = st.columns([0.35, 0.65])  # 👈 wider uploader
 
 with col1:
+    st.markdown("### 📎 Upload File")
     uploaded_file = st.file_uploader(
-        "➕",
-        label_visibility="collapsed",
-        type=["pdf", "txt", "png", "jpg", "jpeg"]
+        "",
+        type=["pdf", "txt", "png", "jpg", "jpeg"],
+        label_visibility="collapsed"
     )
 
     if uploaded_file:
@@ -146,7 +147,7 @@ with col1:
         st.success("File uploaded successfully")
 
 with col2:
-    st.markdown("### Chat with BrainWave AI")
+    st.markdown("### 💬 Chat with BrainWave AI")
 
 # ================= AI FUNCTION =================
 def ask_assistant(question):
@@ -179,9 +180,29 @@ for user_msg, bot_msg in reversed(history):
     st.markdown(f"**🤖 BrainWave AI:** {bot_msg}")
     st.markdown("---")
 
-# ================= HIDE STREAMLIT UI =================
+# ================= CUSTOM CSS (EXTEND UPLOAD BOX) =================
 st.markdown("""
 <style>
+/* Extend file uploader width */
+section[data-testid="stFileUploader"] {
+    width: 100%;
+}
+
+/* Increase height and padding */
+section[data-testid="stFileUploader"] > div {
+    min-height: 220px;
+    padding: 20px;
+    border-radius: 14px;
+}
+
+/* Center drag & drop text */
+section[data-testid="stFileUploader"] label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 180px;
+    font-size: 16px;
+}
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
 header {visibility: hidden;}
