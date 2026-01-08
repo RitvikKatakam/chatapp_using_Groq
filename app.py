@@ -17,6 +17,13 @@ llm = ChatGroq(
     temperature=0
 )
 
+st.set_page_config(
+    page_title="BrainWave AI",
+    page_icon="🧠",
+    layout="wide"
+)
+
+
 # ================= SYSTEM PROMPT =================
 SYSTEM_PROMPT = """
 You are a Personal AI Knowledge Assistant.
@@ -58,4 +65,5 @@ for q, a in reversed(st.session_state.history):
     st.markdown(f"**🧑 You:** {q}")
     st.markdown(f"**🤖 Bot:** {a}")
     st.markdown("---")
+
 
