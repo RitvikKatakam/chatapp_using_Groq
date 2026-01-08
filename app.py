@@ -4,7 +4,7 @@ import streamlit as st
 from langchain_groq import ChatGroq
 from dotenv import load_dotenv
 
-# ================= PAGE CONFIG (MUST BE FIRST STREAMLIT CALL) =================
+# ================= PAGE CONFIG (FIRST STREAMLIT CALL) =================
 st.set_page_config(
     page_title="BrainWave AI",
     page_icon="🧠",
@@ -14,23 +14,10 @@ st.set_page_config(
 # ================= LOAD ENV =================
 load_dotenv()
 
-# Safety check
+# Safety check for API key
 if not os.getenv("GROQ_API_KEY"):
-    st.error("❌ GROQ_API_KEY not found. Set it in .env or Streamlit Secrets.")
+    st.error("❌ GROQ_API_KEY not found. Set it in Streamlit Secrets or .env")
     st.stop()
-
-# ================= FILE FOR HISTORY =================
-HISTORY_FILE = "chat_history.json"
-
-def load_history():
-    if os.path.exists(HISTORY_FILE):
-        with open(HISTORY_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return []
-
-def save_history(history):
-    with open(HISTORY_FILE, "w", encoding="utf-8") as f:
-        json.dump(history, f, indent=2, ensure_ascii=False)
 
 # ================= INITIALIZE LLM =================
 llm = ChatGroq(
@@ -51,10 +38,17 @@ with st.sidebar:
     st.markdown("AI-powered chat & deep research assistant")
     st.divider()
 
-    if st.button("🗑️ Clear Chat History"):
+    if st.button("🗑️ Clear Chat"):
         st.session_state.history = []
-        save_history([])
-        st.success("Chat history cleared")
+        st.success("Chat cleared")
+
+    if "history" in st.session_state and st.session_state.history:
+        st.download_button(
+            label="⬇️ Download Chat History",
+            data=json.dumps(st.session_state.history, indent=2),
+            file_name="brainwave_ai_chat_history.json",
+            mime="application/json"
+        )
 
     st.divider()
     st.markdown("🚀 Powered by Grok API")
@@ -79,7 +73,7 @@ def ask_assistant(question):
 
 # ================= SESSION STATE =================
 if "history" not in st.session_state:
-    st.session_state.history = load_history()
+    st.session_state.history = []
 
 # ================= CHAT INPUT =================
 with st.form("chat_form", clear_on_submit=True):
@@ -88,13 +82,10 @@ with st.form("chat_form", clear_on_submit=True):
 
     if submitted and question.strip():
         answer = ask_assistant(question)
-
         st.session_state.history.append({
             "user": question,
             "assistant": answer
         })
-
-        save_history(st.session_state.history)
 
 # ================= DISPLAY CHAT =================
 st.markdown("---")
