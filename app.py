@@ -22,6 +22,12 @@ st.set_page_config(
     page_icon="🧠",
     layout="wide"
 )
+st.markdown(
+    "<h1 style='text-align: center;'>🧠 BrainWave AI</h1>",
+    unsafe_allow_html=True
+)
+st.caption("Think Deeper • Ask Smarter • Powered by Grok")
+
 
 
 # ================= SYSTEM PROMPT =================
@@ -65,5 +71,6 @@ for q, a in reversed(st.session_state.history):
     st.markdown(f"**🧑 You:** {q}")
     st.markdown(f"**🤖 Bot:** {a}")
     st.markdown("---")
+
 
 
