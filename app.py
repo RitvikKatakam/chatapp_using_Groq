@@ -30,8 +30,15 @@ Rules:
 - Ask ONE follow-up question at the end
 """
 
-def ask_assistant(question):
-    prompt = f"{SYSTEM_PROMPT}\n\nUser Question:\n{question}"
+def ask_assistant(question, docs=""):
+    prompt = f"""{SYSTEM_PROMPT}
+
+Reference Docs:
+{docs}
+
+User Question:
+{question}
+"""
     response = llm.invoke(prompt)
     return response.content
 
@@ -43,18 +50,43 @@ st.caption("Powered by Groq")
 if "history" not in st.session_state:
     st.session_state.history = []
 
-# Input form
+if "documents" not in st.session_state:
+    st.session_state.documents = ""
+
+# ================= FILE UPLOAD SECTION =================
+st.subheader("📄 Add Documents / Files")
+
+uploaded_file = st.file_uploader(
+    "Upload a document (TXT, PDF, DOCX)",
+    type=["txt", "pdf", "docx"]
+)
+
+if st.button("➕ Add to Knowledge Base"):
+    if uploaded_file is not None:
+        try:
+            content = uploaded_file.read().decode("utf-8", errors="ignore")
+            st.session_state.documents += "\n" + content
+            st.success("✅ Document added successfully!")
+        except Exception as e:
+            st.error("❌ Failed to read file")
+    else:
+        st.warning("⚠️ Please upload a file first")
+
+# ================= CHAT SECTION =================
 with st.form("chat_form", clear_on_submit=True):
     question = st.text_input("Ask any question")
     submitted = st.form_submit_button("Submit")
 
     if submitted and question.strip():
-        answer = ask_assistant(question)
+        answer = ask_assistant(
+            question,
+            st.session_state.documents
+        )
         st.session_state.history.append((question, answer))
 
-# Display chat history
+# ================= DISPLAY CHAT HISTORY =================
 st.markdown("---")
 for q, a in reversed(st.session_state.history):
-    st.markdown(f"**🧑 You:** {q}")
-    st.markdown(f"**🤖 Assistant:** {a}")
+    st.markdown(f"**🧑 ME:** {q}")
+    st.markdown(f"**🤖 Bot:** {a}")
     st.markdown("---")
