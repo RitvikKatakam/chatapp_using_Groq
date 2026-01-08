@@ -53,7 +53,11 @@ def save_message(user_msg, assistant_msg):
 def load_messages():
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("SELECT user_message, assistant_message FROM chat_history ORDER BY id ASC")
+    cur.execute("""
+        SELECT timestamp, user_message, assistant_message
+        FROM chat_history
+        ORDER BY id ASC
+    """)
     rows = cur.fetchall()
     conn.close()
     return rows
@@ -64,6 +68,17 @@ def clear_messages():
     cur.execute("DELETE FROM chat_history")
     conn.commit()
     conn.close()
+
+def export_chat_history():
+    rows = load_messages()
+    export_text = ""
+    for ts, user, assistant in rows:
+        export_text += (
+            f"[{ts}]\n"
+            f"You: {user}\n"
+            f"BrainWave AI: {assistant}\n\n"
+        )
+    return export_text
 
 init_db()
 
@@ -79,14 +94,23 @@ st.caption("Think Deeper • Ask Smarter • Powered by Grok")
 
 # ================= SETTINGS PANEL =================
 with st.expander("⚙️ Settings & Controls", expanded=False):
-    if st.button("🗑️ Clear Chat History"):
-        clear_messages()
-        st.success("Chat history cleared")
 
-    if st.button("📎 Clear Uploaded File"):
-        st.session_state.file_context = ""
-        st.session_state.file_uploader = None
-        st.success("Uploaded file cleared")
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("🗑️ Clear Chat History"):
+            clear_messages()
+            st.success("Chat history cleared")
+
+    with col2:
+        chat_export = export_chat_history()
+        if chat_export.strip():
+            st.download_button(
+                label="⬇️ Download Chat History",
+                data=chat_export,
+                file_name="brainwave_ai_chat_history.txt",
+                mime="text/plain"
+            )
 
     st.markdown("🚀 Powered by Grok API")
 
@@ -130,7 +154,7 @@ with col1:
 
     uploaded_file = st.file_uploader(
         "",
-        type=["pdf", "txt"],  # ✅ DOCUMENTS ONLY
+        type=["pdf", "txt"],
         label_visibility="collapsed",
         key="file_uploader"
     )
@@ -168,9 +192,10 @@ with st.form("chat_form", clear_on_submit=True):
 st.markdown("---")
 history = load_messages()
 
-for user_msg, bot_msg in reversed(history):
+for ts, user_msg, bot_msg in reversed(history):
     st.markdown(f"**🧑 You:** {user_msg}")
     st.markdown(f"**🤖 BrainWave AI:** {bot_msg}")
+    st.caption(f"🕒 {ts}")
     st.markdown("---")
 
 # ================= CUSTOM CSS =================
