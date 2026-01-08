@@ -93,7 +93,7 @@ st.markdown(
     "<h1 style='text-align:center;'>🧠 BrainWave AI</h1>",
     unsafe_allow_html=True
 )
-st.caption("Think Deeper • Ask Smarter • Powered by Grok")
+st.caption("Think Deeper • Ask Smarter • Powered by Groq")
 
 # ================= SETTINGS PANEL =================
 with st.expander("⚙️ Settings & Controls", expanded=False):
@@ -115,7 +115,7 @@ with st.expander("⚙️ Settings & Controls", expanded=False):
                 mime="text/plain"
             )
 
-    st.markdown("🚀 Powered by Grok API")
+    st.markdown("🚀 Powered by Groq API")
 
 # ================= SYSTEM PROMPT =================
 SYSTEM_PROMPT = """
@@ -124,7 +124,7 @@ You are a Personal AI Knowledge Assistant.
 Identity rules:
 - If the user asks about your name, identity, or who you are,
   respond exactly with:
-  "I am Grok AI, followed up by ChatGPT."
+  "I am Groq AI."
 
 General rules:
 - Explain concepts step by step
@@ -184,7 +184,7 @@ def ask_assistant(question):
     ]
 
     if any(trigger in question.lower() for trigger in identity_triggers):
-        return "I am Grok AI, followed up by ChatGPT."
+        return "I am Groq AI."
 
     prompt = f"""
 {SYSTEM_PROMPT}
