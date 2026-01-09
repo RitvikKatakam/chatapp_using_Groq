@@ -20,6 +20,25 @@ if not os.getenv("GROQ_API_KEY"):
     st.error("❌ GROQ_API_KEY not found. Set it in Streamlit Secrets or .env")
     st.stop()
 
+# ================= USER NAME HANDLING =================
+if "user_name" not in st.session_state:
+    st.session_state.user_name = ""
+
+if not st.session_state.user_name:
+    st.markdown("## 👋 Welcome to BrainWave AI")
+    st.markdown("Before we start, please tell me your name 😊")
+
+    name = st.text_input("Your name")
+
+    if st.button("Start Chat"):
+        if name.strip():
+            st.session_state.user_name = name.strip()
+            st.rerun()
+        else:
+            st.warning("Please enter your name to continue.")
+
+    st.stop()  # 🚨 Stop app until name is entered
+
 # ================= DATABASE SETUP =================
 DB_PATH = "chat_history.db"
 
@@ -32,6 +51,7 @@ def init_db():
     cur.execute("""
         CREATE TABLE IF NOT EXISTS chat_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_name TEXT,
             user_message TEXT,
             assistant_message TEXT,
             timestamp TEXT
@@ -40,12 +60,12 @@ def init_db():
     conn.commit()
     conn.close()
 
-def save_message(user_msg, assistant_msg):
+def save_message(user_name, user_msg, assistant_msg):
     conn = get_db()
     cur = conn.cursor()
     cur.execute(
-        "INSERT INTO chat_history VALUES (NULL, ?, ?, ?)",
-        (user_msg, assistant_msg, datetime.now().isoformat())
+        "INSERT INTO chat_history VALUES (NULL, ?, ?, ?, ?)",
+        (user_name, user_msg, assistant_msg, datetime.now().isoformat())
     )
     conn.commit()
     conn.close()
@@ -54,7 +74,7 @@ def load_messages():
     conn = get_db()
     cur = conn.cursor()
     cur.execute("""
-        SELECT timestamp, user_message, assistant_message
+        SELECT timestamp, user_name, user_message, assistant_message
         FROM chat_history
         ORDER BY id ASC
     """)
@@ -72,10 +92,10 @@ def clear_messages():
 def export_chat_history():
     rows = load_messages()
     export_text = ""
-    for ts, user, assistant in rows:
+    for ts, uname, user, assistant in rows:
         export_text += (
             f"[{ts}]\n"
-            f"You: {user}\n"
+            f"{uname}: {user}\n"
             f"BrainWave AI: {assistant}\n\n"
         )
     return export_text
@@ -88,12 +108,12 @@ llm = ChatGroq(
     temperature=0
 )
 
-# ================= BRAND HEADER =================
+# ================= HEADER =================
 st.markdown(
-    "<h1 style='text-align:center;'>🧠 BrainWave AI</h1>",
+    f"<h1 style='text-align:center;'>🧠 BrainWave AI</h1>",
     unsafe_allow_html=True
 )
-st.caption("Think Deeper • Ask Smarter • Powered by Groq")
+st.caption(f"Welcome, **{st.session_state.user_name}** 👋 | Powered by Groq")
 
 # ================= SETTINGS PANEL =================
 with st.expander("⚙️ Settings & Controls", expanded=False):
@@ -115,27 +135,24 @@ with st.expander("⚙️ Settings & Controls", expanded=False):
                 mime="text/plain"
             )
 
-    st.markdown("🚀 Powered by Groq API")
-
 # ================= SYSTEM PROMPT =================
-SYSTEM_PROMPT = """
+SYSTEM_PROMPT = f"""
 You are a Personal AI Knowledge Assistant.
 
 Identity rules:
-- If the user asks about your name, identity, or who you are,
-  respond exactly with:
+- If the user asks about your name or identity, respond exactly with:
   "I am Groq AI."
 
-General rules:
+Conversation rules:
+- The user's name is {st.session_state.user_name}
+- Be friendly and address the user by name when appropriate
 - Explain concepts step by step
 - Use simple language
 - Give examples
-- Mention time and space complexity if applicable
 - Be accurate and concise
-- Ask ONE follow-up question at the end (except for identity questions)
 """
 
-# ================= FILE HANDLING (PDF & TXT ONLY) =================
+# ================= FILE HANDLING =================
 def read_uploaded_file(uploaded_file):
     if uploaded_file.type == "application/pdf":
         reader = PdfReader(uploaded_file)
@@ -154,7 +171,7 @@ def read_uploaded_file(uploaded_file):
 if "file_context" not in st.session_state:
     st.session_state.file_context = ""
 
-# ================= FILE UPLOAD + CHAT =================
+# ================= FILE UPLOAD =================
 col1, col2 = st.columns([0.35, 0.65])
 
 with col1:
@@ -163,8 +180,7 @@ with col1:
     uploaded_file = st.file_uploader(
         "",
         type=["pdf", "txt"],
-        label_visibility="collapsed",
-        key="file_uploader"
+        label_visibility="collapsed"
     )
 
     if uploaded_file:
@@ -176,14 +192,9 @@ with col2:
 
 # ================= AI FUNCTION =================
 def ask_assistant(question):
-    identity_triggers = [
-        "what is your name",
-        "who are you",
-        "your name",
-        "what are you"
-    ]
+    identity_triggers = ["what is your name", "who are you"]
 
-    if any(trigger in question.lower() for trigger in identity_triggers):
+    if any(t in question.lower() for t in identity_triggers):
         return "I am Groq AI."
 
     prompt = f"""
@@ -199,19 +210,19 @@ User Question:
 
 # ================= CHAT INPUT =================
 with st.form("chat_form", clear_on_submit=True):
-    question = st.text_input("Ask any question")
+    question = st.text_input(f"{st.session_state.user_name}, ask any question")
     submitted = st.form_submit_button("Submit")
 
     if submitted and question.strip():
         answer = ask_assistant(question)
-        save_message(question, answer)
+        save_message(st.session_state.user_name, question, answer)
 
 # ================= DISPLAY CHAT =================
 st.markdown("---")
 history = load_messages()
 
-for ts, user_msg, bot_msg in reversed(history):
-    st.markdown(f"**🧑 You:** {user_msg}")
+for ts, uname, user_msg, bot_msg in reversed(history):
+    st.markdown(f"**🧑 {uname}:** {user_msg}")
     st.markdown(f"**🤖 BrainWave AI:** {bot_msg}")
     st.caption(f"🕒 {ts}")
     st.markdown("---")
@@ -227,35 +238,10 @@ st.markdown("""
     text-align: center;
     color: #9aa0a6;
     font-size: 14px;
-    z-index: 999;
 }
 </style>
 
 <div class="app-footer">
 🤖 <b>BrainWave AI</b> — Created by an AI Student
 </div>
-""", unsafe_allow_html=True)
-
-# ================= HIDE STREAMLIT UI =================
-st.markdown("""
-<style>
-section[data-testid="stFileUploader"] {
-    width: 100%;
-}
-section[data-testid="stFileUploader"] > div {
-    min-height: 220px;
-    padding: 20px;
-    border-radius: 14px;
-}
-section[data-testid="stFileUploader"] label {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 180px;
-    font-size: 16px;
-}
-#MainMenu {visibility: hidden;}
-footer {visibility: hidden;}
-header {visibility: hidden;}
-</style>
 """, unsafe_allow_html=True)
