@@ -3,7 +3,7 @@ import sqlite3
 import streamlit as st
 from langchain_groq import ChatGroq
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timedelta
 from PyPDF2 import PdfReader
 
 # ================= PAGE CONFIG =================
@@ -49,7 +49,6 @@ def init_db():
     conn = get_db()
     cur = conn.cursor()
 
-    # Create table if not exists
     cur.execute("""
         CREATE TABLE IF NOT EXISTS chat_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -60,13 +59,23 @@ def init_db():
         )
     """)
 
-    # 🔄 Migration: add user_name if missing (old DB fix)
+    # 🔄 Migration for older DBs
     cur.execute("PRAGMA table_info(chat_history)")
-    columns = [col[1] for col in cur.fetchall()]
-
+    columns = [c[1] for c in cur.fetchall()]
     if "user_name" not in columns:
         cur.execute("ALTER TABLE chat_history ADD COLUMN user_name TEXT")
 
+    conn.commit()
+    conn.close()
+
+def clear_old_messages(hours=24):
+    cutoff = datetime.now() - timedelta(hours=hours)
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        "DELETE FROM chat_history WHERE timestamp < ?",
+        (cutoff.isoformat(),)
+    )
     conn.commit()
     conn.close()
 
@@ -106,7 +115,9 @@ def export_chat_history():
         text += f"[{ts}]\n{uname}: {user}\nBrainWave AI: {bot}\n\n"
     return text
 
+# Initialize DB & auto-clean old chats
 init_db()
+clear_old_messages(hours=24)
 
 # ================= INITIALIZE LLM =================
 llm = ChatGroq(
@@ -137,6 +148,8 @@ with st.expander("⚙️ Settings & Controls", expanded=False):
                 mime="text/plain"
             )
 
+    st.info("🕒 Chat history is automatically cleared every 24 hours.")
+
 # ================= SYSTEM PROMPT =================
 SYSTEM_PROMPT = f"""
 You are a Personal AI Knowledge Assistant.
@@ -162,10 +175,8 @@ def read_uploaded_file(uploaded_file):
             if page.extract_text():
                 text += page.extract_text()
         return text
-
     elif uploaded_file.type == "text/plain":
         return uploaded_file.read().decode("utf-8")
-
     return ""
 
 # ================= SESSION STATE =================
@@ -193,7 +204,6 @@ with col2:
 # ================= AI FUNCTION =================
 def ask_assistant(question):
     identity_triggers = ["what is your name", "who are you"]
-
     if any(t in question.lower() for t in identity_triggers):
         return "I am Groq AI."
 
